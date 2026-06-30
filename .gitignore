@@ -1,3 +1,5 @@
 .env
 *.log
 nginx/certs/
+backups/*
+!backups/.gitkeep
