@@ -1,4 +1,73 @@
 services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+    networks:
+      - monitoring
+
+    depends_on:
+      - prometheus
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+
+    privileged: true
+
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/snap/docker/common/var-lib-docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+
+    networks:
+      - monitoring
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+
+    pid: host
+
+    volumes:
+      - /:/host:ro
+
+    command:
+      - "--path.rootfs=/host"
+
+    networks:
+      - monitoring
   postgres:
     image: postgres:16
     container_name: postgres
@@ -102,9 +171,13 @@ volumes:
   postgres_data:
   redis_data:
   nextcloud_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   frontend:
     driver: bridge
   backend:
+    driver: bridge
+  monitoring:
     driver: bridge
